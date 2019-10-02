@@ -1,4 +1,6 @@
-(ns auction-house.core
+(ns ^{:doc "The Auction house program."
+      :author "Benjamin Martinez Ibarra"}
+  auction-house.core
   (:gen-class))
 
 (declare find-winning-bid
@@ -11,7 +13,7 @@
          by-bid-amount
          minimum-winning-amount)
 
-;bid type
+;Bid type
 (defrecord Bid
   [bidder bid-amount])
 
@@ -20,7 +22,7 @@
   Returns the winner of the auction with the bidding amount he will have to pay.
   A winner has the best bid amount for the auction but may not pay that amount.
   A winner will pay the last winning bid amount involving another bidder or the start price if not superior.
-  May return 'no winner' message if no bidder are present and/or cannot afford the start price at least."
+  May return 'no winner' message if no bidder are present and/or none can afford the start price at least."
   [start-price all-bids]
   (let [winning-bid (-> all-bids
                         (map-to-bids)
@@ -32,7 +34,7 @@
         (str "Winner is " winner " with a bid of " winning-amount)))))
 
 (defn- map-to-bids
-  "Transform a map where each entry represents a bidder and his bids into a sequence of [bidder bid-amount] pairs."
+  "Transform a map where each entry represents a bidder and his bids amounts into a sequence of Bids ([bidder bid-amount] pairs)."
   [bidder-amounts-map]
   (reduce
     (fn [all-bids [bidder bid-amounts]]
@@ -41,8 +43,8 @@
     (seq bidder-amounts-map)))
 
 (defn- to-bids
-  "Transform a bidder and its bids amounts into a sequence of [bidder bid-amount] pairs.
-  A pair will be referenced as Bid in the rest of the program."
+  "Transforms a bidder and its bids amounts into a sequence of Bids.
+  A Bid is composed of a bidder and a bid-amount."
   [bidder bids-amounts]
   (reduce
     (fn [bids bid-amount]
@@ -73,13 +75,13 @@
        (recur next-bid (rest bids) start-price)))))
 
 (defn- sort-by-amount-desc
-  "Sorts a list of bids by bid-amount."
+  "Sorts a list of bids by their bid-amount."
   [bids]
   (sort by-bid-amount bids))
 
 (defn by-bid-amount
   "Simple comparator between 2 bids, comparing their amount decremently."
-  [bid1 bid2]
+  [^Bid bid1 ^Bid bid2]
   (compare (amount bid2) (amount bid1)))
 
 (defn- amount
@@ -89,12 +91,12 @@
 
 (defn- same-bidder?
   "Returns true if both bids belong to the same bidder.False otherwise"
-  [bid1 bid2]
+  [^Bid bid1 ^Bid bid2]
   (= (bidder bid1) (bidder bid2)))
 
 (defn- bidder
   "Retrieve the bidder part of a bid"
-  [bid]
+  [^Bid bid]
   (:bidder bid))
 
 (defn- winning-bidder-amount
