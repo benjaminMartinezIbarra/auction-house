@@ -1,4 +1,5 @@
-(ns auction-house.core)
+(ns auction-house.core
+  (:gen-class))
 
 (declare find-winning-bid
          map-to-bids
@@ -9,6 +10,10 @@
          winning-bidder-amount
          by-bid-amount
          minimum-winning-amount)
+
+;bid type
+(defrecord Bid
+  [bidder bid-amount])
 
 (defn winning-auction
   "Main controller of the auction. Will compare each bid until finding a winner.
@@ -29,24 +34,28 @@
 (defn- map-to-bids
   "Transform a map where each entry represents a bidder and his bids into a sequence of [bidder bid-amount] pairs."
   [bidder-amounts-map]
-  (reduce (fn [all-bids [bidder bid-amounts]] (into all-bids (to-bids bidder bid-amounts)))
-          (vector)
-          (seq bidder-amounts-map)))
+  (reduce
+    (fn [all-bids [bidder bid-amounts]]
+      (into all-bids (to-bids bidder bid-amounts)))
+    (vector)
+    (seq bidder-amounts-map)))
 
 (defn- to-bids
   "Transform a bidder and its bids amounts into a sequence of [bidder bid-amount] pairs.
   A pair will be referenced as Bid in the rest of the program."
   [bidder bids-amounts]
-  (reduce (fn [bids bid]
-            (conj bids [bidder bid]))
-          (vector)
-          bids-amounts))
+  (reduce
+    (fn [bids bid-amount]
+      (conj bids (->Bid bidder bid-amount)))
+    (vector)
+    bids-amounts))
 
 (defn find-winning-bid
-  "iterate through the bids and find the combination of the best bidder whose bid amount is the greatest among all the bids
-   and the last winning bid amount value whenever it comes from a different bidder.
-   May return :no-winner keyword if none of the bidders have a bidding amount >= start price
-   or both of the two greatest bidders have same max bid amounts."
+  "Finds the winning bid among a collection of bids.
+   May return :no-winner keyword if none of the 2 best bidders have a bidding amount >= start price
+   or both of the two greatest bidders have same max bid amounts.
+   Otherwise, iterate through the bids and find the combination of the best bidder whose bid amount is the greatest among all the bid
+   and the last winning bid amount value whenever it comes from a different bidder."
   ([bids start-price]
    (let [sorted-bids (sort-by-amount-desc bids)
          top-bid (first sorted-bids)
@@ -57,7 +66,6 @@
                   (= (amount top-bid) (amount (first next-bids)))))
        :no-winner
        (find-winning-bid top-bid next-bids start-price))))
-
   ([reference-bid bids start-price]
    (let [next-bid (first bids)]
      (if (not (same-bidder? reference-bid next-bid))
@@ -76,8 +84,8 @@
 
 (defn- amount
   "Retrieve the amount part of a bid"
-  [bid]
-  (or (second bid) 0))
+  [^Bid bid]
+  (or (:bid-amount bid) 0))
 
 (defn- same-bidder?
   "Returns true if both bids belong to the same bidder.False otherwise"
@@ -87,7 +95,7 @@
 (defn- bidder
   "Retrieve the bidder part of a bid"
   [bid]
-  (first bid))
+  (:bidder bid))
 
 (defn- winning-bidder-amount
   "Compare two bids and returns a combination of:
@@ -96,11 +104,10 @@
   [first-bid second-bid start-price]
   (let [first-bid-amount (amount first-bid)
         second-bid-amount (amount second-bid)]
-
     (cond
-      (= first-bid-amount second-bid-amount) [(bidder first-bid) first-bid-amount]
-      (> first-bid-amount second-bid-amount) [(bidder first-bid) (minimum-winning-amount second-bid-amount start-price)]
-      :else [(bidder second-bid) (minimum-winning-amount second-bid-amount start-price)])))
+      (= first-bid-amount second-bid-amount) (->Bid (bidder first-bid) first-bid-amount)
+      (> first-bid-amount second-bid-amount) (->Bid (bidder first-bid) (minimum-winning-amount second-bid-amount start-price))
+      :else (->Bid (bidder second-bid) (minimum-winning-amount second-bid-amount start-price)))))
 
 (defn- minimum-winning-amount
   "Retrieve the lowest amount between a bid amount and a start price.
